@@ -1041,7 +1041,7 @@ export default function Home() {
                   fps={30}
                   style={{ width: '100%', height: '100%' }}
                   controls
-                  autoPlay
+                  autoPlay={false}
                 />
               </div>
             ) : (
