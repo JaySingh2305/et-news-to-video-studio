@@ -54,8 +54,8 @@ function createWavUrl(base64Pcm: string, sampleRate: number = 24000): { url: str
 }
 
 const AVATAR_PERSONAS = [
-  { id: 'anchor_m', name: 'News Anchor (M)', prompt: 'A photorealistic, professional Indian male news anchor sitting at a modern news desk. High quality, 4k, cinematic lighting, broadcast studio background.' },
-  { id: 'anchor_f', name: 'News Anchor (F)', prompt: 'A photorealistic, professional Indian female news anchor sitting at a modern news desk. High quality, 4k, cinematic lighting, broadcast studio background.' },
+  { id: 'anchor_m', name: 'News Anchor (M)', prompt: 'A photorealistic, professional Indian male news anchor sitting at a modern news desk with Economic Times background. High quality, 4k, cinematic lighting, broadcast studio background.' },
+  { id: 'anchor_f', name: 'News Anchor (F)', prompt: 'A photorealistic, professional Indian female news anchor sitting at a modern news desk with Economic Times background. High quality, 4k, cinematic lighting, broadcast studio background.' },
   { id: 'tech', name: 'Tech Reviewer', prompt: 'A casual, friendly Indian tech reviewer in a modern studio with neon lights in the background. Photorealistic, 4k, cinematic.' },
   { id: 'finance', name: 'Financial Analyst', prompt: 'A sharp Indian financial analyst in a high-end corporate office with charts in the background. Photorealistic, 4k, cinematic.' },
 ];
@@ -64,28 +64,28 @@ const VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'script' | 'avatar' | 'visuals'>('script');
-  
+
   // Script State
   const [url, setUrl] = useState('');
   const [isScraping, setIsScraping] = useState(false);
-  const [script, setScript] = useState('Welcome to the daily update. Today, markets rallied as tech stocks surged to new all-time highs. Investors are optimistic about the upcoming earnings season. Meanwhile, the central bank hinted at potential rate cuts later this year. Stay tuned for more updates.');
-  const [headline, setHeadline] = useState('Market Rally Continues');
-  
+  const [script, setScript] = useState('');
+  const [headline, setHeadline] = useState('');
+
   // Voice State
   const [selectedVoice, setSelectedVoice] = useState('Charon');
   const [audioData, setAudioData] = useState<string | null>(null);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [audioDurationFrames, setAudioDurationFrames] = useState(300); // Default 10s at 30fps
-  
+
   // Avatar State
   const [selectedPersona, setSelectedPersona] = useState(AVATAR_PERSONAS[0]);
   const [customAvatarPrompt, setCustomAvatarPrompt] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
-  
+
   // Visuals State
   const [bRollImages, setBRollImages] = useState<string[]>([]);
-  const [stockData, setStockData] = useState<{symbol: string, price: string, change: string}[]>([]);
+  const [stockData, setStockData] = useState<{ symbol: string, price: string, change: string }[]>([]);
   const [isGeneratingVisuals, setIsGeneratingVisuals] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -107,7 +107,7 @@ export default function Home() {
     const newImages = [...bRollImages];
     const [draggedImage] = newImages.splice(draggedIndex, 1);
     newImages.splice(dropIndex, 0, draggedImage);
-    
+
     setBRollImages(newImages);
     setDraggedIndex(null);
   };
@@ -115,31 +115,63 @@ export default function Home() {
   const handleDragEnd = () => {
     setDraggedIndex(null);
   };
-  
+
   // Global Progress
   const [progressMsg, setProgressMsg] = useState('');
   const [error, setError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [isProcessingPipeline, setIsProcessingPipeline] = useState(false);
+  const [timelineHeight, setTimelineHeight] = useState(256);
+  const isResizingRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const newHeight = window.innerHeight - e.clientY;
+      const boundedHeight = Math.max(120, Math.min(newHeight, window.innerHeight * 0.8));
+      setTimelineHeight(boundedHeight);
+    };
+
+    const handleMouseUp = () => {
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+        document.body.style.cursor = 'default';
+        document.body.classList.remove('select-none');
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  const handleResizeStart = () => {
+    isResizingRef.current = true;
+    document.body.style.cursor = 'row-resize';
+    document.body.classList.add('select-none');
+  };
 
   const handleExportVideo = async () => {
     if (!audioData || !avatarUrl) {
       setError('Please generate audio and avatar first.');
       return;
     }
-    
+
     setIsExporting(true);
     setExportProgress(0);
     setError('');
-    
+
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 1920;
       canvas.height = 1080;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Could not create canvas context');
-      
+
       const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -147,21 +179,21 @@ export default function Home() {
         img.onerror = reject;
         img.src = src;
       });
-      
+
       const avatarImg = await loadImage(avatarUrl);
       const bRollImgs = await Promise.all(bRollImages.map(loadImage));
-      
+
       const audio = new Audio(audioData);
       audio.crossOrigin = 'anonymous';
-      
+
       // Wait for audio metadata to get duration
       await new Promise((resolve) => {
         audio.addEventListener('loadedmetadata', resolve, { once: true });
       });
-      
+
       const duration = audio.duration;
       if (!duration || !isFinite(duration)) throw new Error('Invalid audio duration');
-      
+
       // Pre-calculate subtitles
       const words = script ? script.split(' ').filter(Boolean) : [];
       let totalWeight = 0;
@@ -183,14 +215,14 @@ export default function Home() {
         const wordWeight = wordWeights[index];
         const startTime = currentWeight * secondsPerWeight;
         const endTime = (currentWeight + wordWeight) * secondsPerWeight;
-        
+
         if (currentChunk.length === 0) {
           chunkStartTime = startTime;
         }
-        
+
         currentChunk.push({ word, startTime, endTime });
         currentWeight += wordWeight;
-        
+
         const isSentenceEnd = word.endsWith('.') || word.endsWith('!') || word.endsWith('?');
         if (currentChunk.length >= 7 || isSentenceEnd || index === words.length - 1) {
           chunksData.push({
@@ -201,11 +233,11 @@ export default function Home() {
           currentChunk = [];
         }
       });
-      
+
       const captureStream = (canvas as any).captureStream || (canvas as any).mozCaptureStream;
       if (!captureStream) throw new Error('Video export is not supported in this browser.');
       const canvasStream = captureStream.call(canvas, 30);
-      
+
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       const audioCtx = new AudioContextClass();
       const source = audioCtx.createMediaElementSource(audio);
@@ -213,12 +245,12 @@ export default function Home() {
       source.connect(dest);
       // Mute audio during export by not connecting to destination
       // source.connect(audioCtx.destination);
-      
+
       const combinedStream = new MediaStream([
         ...canvasStream.getVideoTracks(),
         ...dest.stream.getAudioTracks()
       ]);
-      
+
       let options = { mimeType: 'video/webm' };
       if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
         options.mimeType = 'video/webm;codecs=vp9';
@@ -227,14 +259,14 @@ export default function Home() {
       } else if (MediaRecorder.isTypeSupported('video/mp4')) {
         options.mimeType = 'video/mp4';
       }
-      
+
       const recorder = new MediaRecorder(combinedStream, options);
       const chunks: Blob[] = [];
-      
+
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
-      
+
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: options.mimeType });
         const url = URL.createObjectURL(blob);
@@ -248,28 +280,28 @@ export default function Home() {
         setIsExporting(false);
         setExportProgress(0);
       };
-      
+
       recorder.start();
       await audio.play();
-      
+
       const drawFrame = () => {
         if (audio.ended || audio.paused) {
           if (recorder.state === 'recording') recorder.stop();
           return;
         }
-        
+
         const time = audio.currentTime;
         setExportProgress(Math.round((time / duration) * 100));
-        
+
         // Clear
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, 1920, 1080);
-        
+
         const hasBRoll = bRollImgs.length > 0;
         const introTime = hasBRoll ? duration * 0.2 : duration;
         const outroTime = hasBRoll ? duration * 0.2 : 0;
         const bRollTotalTime = duration - introTime - outroTime;
-        
+
         // Draw Avatar (Base)
         if (!hasBRoll || time <= introTime || time >= (duration - outroTime)) {
           const scale = Math.max(1920 / avatarImg.width, 1080 / avatarImg.height);
@@ -283,21 +315,21 @@ export default function Home() {
           const bRollTime = time - introTime;
           const timePerImg = bRollTotalTime / bRollImgs.length;
           const imgIndex = Math.min(Math.floor(bRollTime / timePerImg), bRollImgs.length - 1);
-          
+
           const imgTime = bRollTime % timePerImg;
           const progress = imgTime / timePerImg;
           const scale = 1 + (0.15 * progress);
-          
+
           const img = bRollImgs[imgIndex];
           const baseScale = Math.max(1920 / img.width, 1080 / img.height);
           const w = img.width * baseScale * scale;
           const h = img.height * baseScale * scale;
           const x = (1920 - w) / 2;
           const y = (1080 - h) / 2;
-          
+
           ctx.drawImage(img, x, y, w, h);
         }
-        
+
         // Draw Subtitles
         if (script && chunksData.length > 0) {
           const activeChunk = chunksData.find(c => time >= c.startTime && time <= c.endTime);
@@ -305,7 +337,7 @@ export default function Home() {
             ctx.save();
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
-            
+
             let totalWidth = 0;
             const wordWidths = activeChunk.words.map(w => {
               const isActive = time >= w.startTime && time <= w.endTime;
@@ -313,22 +345,22 @@ export default function Home() {
               const width = ctx.measureText(w.word).width;
               return width;
             });
-            
+
             totalWidth = wordWidths.reduce((a, b) => a + b, 0) + (wordWidths.length - 1) * 16;
-            
+
             let startX = (1920 - totalWidth) / 2;
             const y = 1080 - 280;
-            
+
             activeChunk.words.forEach((w, i) => {
               const isActive = time >= w.startTime && time <= w.endTime;
               const isPast = time > w.endTime;
-              
+
               ctx.font = isActive ? '800 58px system-ui, sans-serif' : '800 56px system-ui, sans-serif';
-              
+
               ctx.shadowColor = 'rgba(0,0,0,0.8)';
               ctx.shadowBlur = 15;
               ctx.shadowOffsetY = 4;
-              
+
               if (isActive) {
                 ctx.fillStyle = '#fbbf24';
               } else if (isPast) {
@@ -336,50 +368,50 @@ export default function Home() {
               } else {
                 ctx.fillStyle = 'rgba(255,255,255,0.6)';
               }
-              
+
               const wordWidth = wordWidths[i];
               ctx.fillText(w.word, startX + wordWidth / 2, y);
-              
+
               startX += wordWidth + 16;
             });
-            
+
             ctx.restore();
           }
         }
-        
+
         // Draw Lower Third
         if (headline) {
           const entranceProgress = Math.min(time / 0.5, 1);
           const translateY = 200 * (1 - entranceProgress);
-          
+
           ctx.save();
           ctx.translate(0, translateY);
-          
+
           ctx.fillStyle = 'rgba(17, 24, 39, 0.95)';
           ctx.fillRect(80, 1080 - 90 - 120, 1760, 120);
           ctx.fillStyle = '#ef4444';
           ctx.fillRect(80, 1080 - 90 - 120, 8, 120);
-          
+
           ctx.fillStyle = 'white';
           ctx.font = 'bold 42px system-ui, sans-serif';
           ctx.textBaseline = 'middle';
           ctx.fillText(headline, 120, 1080 - 90 - 60);
-          
+
           ctx.restore();
         }
-        
+
         // Draw Ticker
         if (stockData && stockData.length > 0) {
           ctx.fillStyle = '#111827';
           ctx.fillRect(0, 1080 - 60, 1920, 60);
           ctx.fillStyle = '#374151';
           ctx.fillRect(0, 1080 - 62, 1920, 2);
-          
+
           ctx.font = 'bold 24px system-ui, sans-serif';
           ctx.textBaseline = 'middle';
           const speed = 150;
           const startX = 1920 - (time * speed);
-          
+
           let currentX = startX;
           for (let j = 0; j < 10; j++) {
             for (let i = 0; i < stockData.length; i++) {
@@ -387,11 +419,11 @@ export default function Home() {
               ctx.fillStyle = '#9ca3af';
               ctx.fillText(stock.symbol, currentX, 1080 - 30);
               currentX += ctx.measureText(stock.symbol).width + 12;
-              
+
               ctx.fillStyle = 'white';
               ctx.fillText('₹' + stock.price, currentX, 1080 - 30);
               currentX += ctx.measureText('₹' + stock.price).width + 12;
-              
+
               const isPos = stock.change.startsWith('+');
               ctx.fillStyle = isPos ? '#10b981' : '#ef4444';
               const changeText = (isPos ? '▲ ' : '▼ ') + stock.change;
@@ -400,12 +432,12 @@ export default function Home() {
             }
           }
         }
-        
+
         requestAnimationFrame(drawFrame);
       };
-      
+
       drawFrame();
-      
+
     } catch (err: any) {
       console.error(err);
       setIsExporting(false);
@@ -419,7 +451,7 @@ export default function Home() {
     if (!url) return;
     setIsProcessingPipeline(true);
     setError('');
-    
+
     try {
       // 1. Scrape
       setProgressMsg('Extracting article from URL...');
@@ -431,7 +463,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to extract article');
       setHeadline(data.headline);
-      
+
       // 2. Generate Script
       setProgressMsg('Writing news script...');
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
@@ -482,7 +514,7 @@ export default function Home() {
           contents: `Find the current real-time stock prices and daily percentage changes for up to 5 companies mentioned or relevant to this script. Provide the symbol, price, and percentage change. Script: ${data.headline} ${generatedScript}`,
           config: { tools: [{ googleSearch: {} }] }
         });
-        
+
         const stockRes = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: `Extract the stock symbols, prices, and changes from the following text into a JSON array of objects. Each object must have 'symbol' (e.g. AAPL, TCS), 'price' (e.g. "150.00"), and 'change' (e.g. "+1.2%" or "-0.5%"). Text: ${searchRes.text}`,
@@ -502,7 +534,7 @@ export default function Home() {
           config: { responseMimeType: 'application/json', responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } } }
         });
         const prompts = safeJsonParse(promptRes.text || '[]', []);
-        
+
         const newBRoll = [];
         for (let i = 0; i < Math.min(prompts.length, 5); i++) {
           const imgRes = await ai.models.generateContent({
@@ -541,7 +573,7 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to extract article');
-      
+
       setProgressMsg('Generating script from article...');
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
       const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional".\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
@@ -549,7 +581,7 @@ export default function Home() {
         model: 'gemini-3-flash-preview',
         contents: prompt,
       });
-      
+
       setHeadline(data.headline);
       setScript(response.text || '');
     } catch (err: any) {
@@ -602,10 +634,10 @@ export default function Home() {
         model: 'gemini-2.5-flash-image',
         contents: promptToUse,
       });
-      
+
       const parts = avatarRes.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find(p => p.inlineData);
-      
+
       const inlineData = imagePart?.inlineData;
       if (inlineData?.data) {
         const mimeType = inlineData.mimeType || 'image/png';
@@ -628,7 +660,7 @@ export default function Home() {
     setStockData([]);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-      
+
       setProgressMsg('Searching real-time financial data...');
       const searchRes = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -662,7 +694,7 @@ export default function Home() {
         }
       });
       const prompts = safeJsonParse(promptRes.text || '[]', []);
-      
+
       const newBRoll = [];
       for (let i = 0; i < Math.min(prompts.length, 5); i++) {
         setProgressMsg(`Generating B-Roll ${i + 1} of ${Math.min(prompts.length, 5)}...`);
@@ -670,10 +702,10 @@ export default function Home() {
           model: 'gemini-2.5-flash-image',
           contents: prompts[i] + " photorealistic, cinematic, 4k, highly detailed",
         });
-        
+
         const parts = imgRes.candidates?.[0]?.content?.parts || [];
         const imagePart = parts.find(p => p.inlineData);
-        
+
         const inlineData = imagePart?.inlineData;
         if (inlineData?.data) {
           const mimeType = inlineData.mimeType || 'image/png';
@@ -735,22 +767,22 @@ export default function Home() {
               className="w-full bg-gray-50 border border-gray-300/50 rounded-full pl-4 pr-32 py-2 text-sm focus:outline-none focus:border-red-600 transition-colors shadow-inner"
               disabled={isProcessingPipeline}
             />
-            <button 
-              type="submit" 
-              disabled={isProcessingPipeline || !url} 
+            <button
+              type="submit"
+              disabled={isProcessingPipeline || !url}
               className="absolute right-1 top-1 bottom-1 bg-red-600 hover:bg-indigo-700 disabled:bg-red-600/50 disabled:cursor-not-allowed rounded-full px-4 flex items-center gap-2 text-xs font-semibold transition-all"
             >
               {isProcessingPipeline ? (
-                <><Loader2 className="w-3 h-3 animate-spin"/> Processing</>
+                <><Loader2 className="w-3 h-3 animate-spin" /> Processing</>
               ) : (
-                <><Wand2 className="w-3 h-3"/> Magic Gen</>
+                <><Wand2 className="w-3 h-3" /> Magic Gen</>
               )}
             </button>
           </form>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <button 
+          <button
             onClick={handleExportVideo}
             disabled={isExporting || !audioData || !avatarUrl || isProcessingPipeline}
             className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100/50 disabled:cursor-not-allowed rounded-md text-sm font-medium transition-colors flex items-center gap-2"
@@ -790,7 +822,7 @@ export default function Home() {
           <div className="p-4 border-b border-gray-200">
             <h2 className="font-semibold text-lg capitalize">{activeTab} Settings</h2>
           </div>
-          
+
           <div className="p-4 space-y-6">
             {activeTab === 'script' && (
               <>
@@ -800,7 +832,7 @@ export default function Home() {
                     <p className="text-xs text-gray-500">Use the URL bar at the top of the interface to automatically generate a video from a news article. Or modify settings here manually.</p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Headline</label>
                   <input
@@ -808,6 +840,7 @@ export default function Home() {
                     value={headline}
                     onChange={(e) => setHeadline(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-red-600"
+                    placeholder="e.g. Market Rally Continues"
                   />
                 </div>
 
@@ -818,6 +851,7 @@ export default function Home() {
                     onChange={(e) => setScript(e.target.value)}
                     rows={8}
                     className="w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-red-600 resize-none"
+                    placeholder="e.g. Welcome to the daily update. Today, markets rallied as tech stocks surged to new all-time highs..."
                   />
                 </div>
 
@@ -840,7 +874,7 @@ export default function Home() {
                   {isGeneratingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
                   Generate Voiceover
                 </button>
-                {audioData && <div className="text-xs text-emerald-400 flex items-center gap-1"><Music className="w-3 h-3"/> Audio ready</div>}
+                {audioData && <div className="text-xs text-emerald-400 flex items-center gap-1"><Music className="w-3 h-3" /> Audio ready</div>}
               </>
             )}
 
@@ -862,7 +896,7 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Or Custom Prompt</label>
                     <textarea
@@ -894,7 +928,7 @@ export default function Home() {
             {activeTab === 'visuals' && (
               <>
                 <p className="text-sm text-gray-500">Generate B-Roll images and extract financial data based on your script.</p>
-                
+
                 <button
                   onClick={handleGenerateVisuals}
                   disabled={isGeneratingVisuals || !script}
@@ -909,8 +943,8 @@ export default function Home() {
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">B-Roll Clips</label>
                     <div className="grid grid-cols-2 gap-2">
                       {bRollImages.map((url, i) => (
-                        <div 
-                          key={i} 
+                        <div
+                          key={i}
                           draggable
                           onDragStart={(e) => handleDragStart(e, i)}
                           onDragOver={handleDragOver}
@@ -918,7 +952,7 @@ export default function Home() {
                           onDragEnd={handleDragEnd}
                           className={`aspect-video rounded-md overflow-hidden border relative group cursor-grab active:cursor-grabbing transition-all ${draggedIndex === i ? 'opacity-50 border-red-600 scale-95' : 'border-gray-200 hover:border-gray-500'}`}
                         >
-                          <img src={url} alt={`B-Roll ${i+1}`} className="w-full h-full object-cover pointer-events-none" />
+                          <img src={url} alt={`B-Roll ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
                           <button
                             onClick={() => handleRemoveBRoll(i)}
                             className="absolute top-1 right-1 p-1 bg-black/60 hover:bg-red-500/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -930,24 +964,24 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="space-y-2 mt-4">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Add Local Images</label>
                   <div className="flex flex-col gap-2">
                     <label className="w-full py-4 border-2 border-dashed border-gray-200 hover:border-red-600/50 rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-white/90">
                       <ImageIcon className="w-6 h-6 text-gray-9000" />
                       <span className="text-sm text-gray-500">Click to upload images</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        multiple 
-                        className="hidden" 
-                        onChange={handleFileUpload} 
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleFileUpload}
                       />
                     </label>
                   </div>
                 </div>
-                
+
                 {stockData.length > 0 && (
                   <div className="space-y-2 mt-4">
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Extracted Tickers</label>
@@ -1025,7 +1059,17 @@ export default function Home() {
       </div>
 
       {/* Bottom Timeline */}
-      <div className="h-64 border-t border-gray-200 bg-white shrink-0 flex flex-col">
+      <div
+        style={{ height: `${timelineHeight}px` }}
+        className="border-t border-gray-200 bg-white shrink-0 flex flex-col relative"
+      >
+        {/* Resize Handle */}
+        <div
+          className="absolute -top-[5px] left-0 right-0 h-[10px] cursor-row-resize z-50 hover:bg-red-500/20 transition-colors flex justify-center items-center group"
+          onMouseDown={handleResizeStart}
+        >
+          <div className="w-16 h-1 bg-gray-300 rounded-full group-hover:bg-red-500 transition-colors" />
+        </div>
         {/* Timeline Header */}
         <div className="h-8 border-b border-gray-200 flex items-center px-4 text-xs font-medium text-gray-500 bg-white/90">
           <div className="w-48 shrink-0">Tracks</div>
@@ -1033,7 +1077,7 @@ export default function Home() {
             <Clock className="w-3 h-3" /> Timeline ({(audioDurationFrames / 30).toFixed(1)}s)
           </div>
         </div>
-        
+
         {/* Timeline Tracks */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {/* Avatar Track */}
@@ -1062,7 +1106,7 @@ export default function Home() {
                 <div className="absolute inset-y-1 left-1 right-1 bg-emerald-600/30 border border-emerald-500/50 rounded flex items-center px-2 overflow-hidden">
                   <div className="w-full h-full flex items-center gap-1 opacity-50">
                     {/* Simulated waveform */}
-                    {Array.from({length: 50}).map((_, i) => (
+                    {Array.from({ length: 50 }).map((_, i) => (
                       <div key={i} className="flex-1 bg-emerald-400 rounded-full" style={{ height: `${Math.max(20, Math.random() * 100)}%` }} />
                     ))}
                   </div>
@@ -1081,8 +1125,8 @@ export default function Home() {
             <div className="flex-1 relative p-1 flex gap-1">
               {bRollImages.length > 0 ? (
                 bRollImages.map((img, i) => (
-                  <div 
-                    key={i} 
+                  <div
+                    key={i}
                     draggable
                     onDragStart={(e) => handleDragStart(e, i)}
                     onDragOver={handleDragOver}
@@ -1091,7 +1135,7 @@ export default function Home() {
                     className={`flex-1 bg-amber-600/30 border rounded flex items-center overflow-hidden relative cursor-grab active:cursor-grabbing transition-all ${draggedIndex === i ? 'opacity-50 border-red-600 scale-95' : 'border-amber-500/50 hover:border-amber-400'}`}
                   >
                     <img src={img} className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none" />
-                    <span className="relative z-10 text-xs font-medium text-amber-200 px-2 truncate pointer-events-none">Scene {i+1}</span>
+                    <span className="relative z-10 text-xs font-medium text-amber-200 px-2 truncate pointer-events-none">Scene {i + 1}</span>
                   </div>
                 ))
               ) : (
