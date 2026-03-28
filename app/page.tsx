@@ -70,6 +70,7 @@ export default function Home() {
   const [isScraping, setIsScraping] = useState(false);
   const [script, setScript] = useState('');
   const [headline, setHeadline] = useState('');
+  const [language, setLanguage] = useState<'English' | 'Hindi'>('English');
 
   // Voice State
   const [selectedVoice, setSelectedVoice] = useState('Charon');
@@ -467,7 +468,7 @@ export default function Home() {
       // 2. Generate Script
       setProgressMsg('Writing news script...');
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional".\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
+      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional". The final script MUST be written entirely in ${language}.\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
@@ -511,7 +512,7 @@ export default function Home() {
       const visualsPromise = (async () => {
         const searchRes = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
-          contents: `Find the current real-time stock prices and daily percentage changes for up to 5 companies mentioned or relevant to this script. Provide the symbol, price, and percentage change. Script: ${data.headline} ${generatedScript}`,
+          contents: `Find the current real-time stock prices and daily percentage changes for up to 5 companies mentioned or relevant to this script. Identify the companies regardless of the language and provide the symbol, price, and percentage change. Script: ${data.headline} ${generatedScript}`,
           config: { tools: [{ googleSearch: {} }] }
         });
 
@@ -530,7 +531,7 @@ export default function Home() {
 
         const promptRes = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
-          contents: `Extract exactly 5 highly visual, descriptive image prompts based on this broadcast script. Make them photorealistic and cinematic. Script: ${generatedScript}`,
+          contents: `Extract exactly 5 highly visual, descriptive image prompts based on this broadcast script. Translate concepts into English if necessary. Make them photorealistic and cinematic. Script: ${generatedScript}`,
           config: { responseMimeType: 'application/json', responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } } }
         });
         const prompts = safeJsonParse(promptRes.text || '[]', []);
@@ -576,7 +577,7 @@ export default function Home() {
 
       setProgressMsg('Generating script from article...');
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional".\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
+      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional". The final script MUST be written entirely in ${language}.\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
@@ -664,7 +665,7 @@ export default function Home() {
       setProgressMsg('Searching real-time financial data...');
       const searchRes = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Find the current real-time stock prices and daily percentage changes for up to 5 companies mentioned or relevant to this script. Provide the symbol, price, and percentage change. Script: ${headline} ${script}`,
+        contents: `Find the current real-time stock prices and daily percentage changes for up to 5 companies mentioned or relevant to this script. Identify the companies regardless of the language and provide the symbol, price, and percentage change. Script: ${headline} ${script}`,
         config: {
           tools: [{ googleSearch: {} }]
         }
@@ -687,7 +688,7 @@ export default function Home() {
       setProgressMsg('Analyzing script for B-Roll...');
       const promptRes = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Extract exactly 5 highly visual, descriptive image prompts based on this broadcast script. Make them photorealistic and cinematic. Script: ${script}`,
+        contents: `Extract exactly 5 highly visual, descriptive image prompts based on this broadcast script. Translate concepts into English if necessary. Make them photorealistic and cinematic. Script: ${script}`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } }
@@ -757,8 +758,16 @@ export default function Home() {
           <div className="flex flex-col"><span className="font-serif font-bold tracking-tighter text-2xl hidden sm:block text-black">THE ECONOMIC TIMES</span><span className="text-[10px] font-bold tracking-widest text-red-600 uppercase">AI Video Studio</span></div>
         </div>
 
-        <div className="flex-1 max-w-2xl px-8">
-          <form onSubmit={handleMagicProcess} className="flex items-center relative">
+        <div className="flex-1 max-w-2xl px-8 flex items-center gap-2">
+          <select 
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as 'English' | 'Hindi')}
+            className="bg-white border border-gray-200/80 rounded-md px-3 py-2 text-xs font-semibold focus:outline-none focus:border-red-600 transition-colors shadow-sm cursor-pointer"
+          >
+            <option value="English">EN</option>
+            <option value="Hindi">HI</option>
+          </select>
+          <form onSubmit={handleMagicProcess} className="flex-1 flex items-center relative">
             <input
               type="url"
               value={url}
