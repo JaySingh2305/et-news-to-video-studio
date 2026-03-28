@@ -1,15 +1,13 @@
-# 📰 ET News to Video Studio
+# 📰 ET News to Video Studio (AI Agent cum Tool)
 
 <img width="1888" height="934" alt="image" src="https://github.com/user-attachments/assets/29adec75-f9c5-4461-b234-6d6f0f31b28c" />
 
 
-A next-generation automated AI native news studio prototype. This Next.js web application transforms any business/financial news article URL into a fully-produced, short-form video briefing—complete with AI avatars, voiceovers, dynamic B-roll, subtitles, and real-time stock data—all with a single click.
-
-It specifically features the **Economic Times** brand styling and was built to demonstrate the capabilities of large multimodal models running complex agentic pipelines.
+A next-generation automated AI native news studio prototype. This application transforms any business/financial news article URL into a fully-produced, short-form video briefing—complete with AI avatars, voiceovers, dynamic B-roll, subtitles, and real-time stock data—all with a single click demonstrating the capabilities of large multimodal models running complex agentic pipelines.
 
 ## ✨ Features
 
-- **🪄 Magic Automation:** Simply paste a news article URL (e.g., from The Economic Times) into the top search bar. The app takes over, executing a parallelized agent pipeline that handles everything from scraping to rendering.
+- **🪄 Magic Automation:** Simply paste a news article URL (from The Economic Times) into the top search bar. The app takes over, executing a parallelized agent pipeline that handles everything from scraping to rendering.
 - **🌐 Bilingual Output:** Flip a switch to natively generate your scripts, headlines, and voiceovers in either **English (EN)** or **Hindi (HI)**. 
 - **🎤 AI Avatars & Voiceovers:** Uses *Gemini 2.5 Flash Image* to synthesize professional news anchor avatars and *Gemini 2.5 Flash TTS* to generate natural, broadcast-quality voiceovers.
 - **📈 Real-Time Data Extractor:** Agentically searches the web via *Gemini 3 Flash* to fetch real-time stock ticker prices for companies mentioned in your news script.
