@@ -463,17 +463,26 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to extract article');
-      setHeadline(data.headline);
-
       // 2. Generate Script
       setProgressMsg('Writing news script...');
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional". The final script MUST be written entirely in ${language}.\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
+      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional". The final script AND a catchy headline MUST be written entirely in ${language}.\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: { headline: { type: Type.STRING }, script: { type: Type.STRING } }
+          }
+        }
       });
-      const generatedScript = response.text || '';
+      
+      const parsed = safeJsonParse(response.text || '{}', { headline: data.headline, script: '' });
+      const generatedScript = parsed.script || '';
+      
+      setHeadline(parsed.headline || data.headline);
       setScript(generatedScript);
 
       setProgressMsg('Generating AI assets (Voice, Avatar, B-Roll)...');
@@ -577,14 +586,22 @@ export default function Home() {
 
       setProgressMsg('Generating script from article...');
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional". The final script MUST be written entirely in ${language}.\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
+      const prompt = `Rewrite the following news article into a punchy, exactly 5-sentence broadcast script. The tone MUST be "Financial Professional". The final script AND a catchy headline MUST be written entirely in ${language}.\n\nHeadline: ${data.headline}\n\nBody: ${data.body}`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: { headline: { type: Type.STRING }, script: { type: Type.STRING } }
+          }
+        }
       });
 
-      setHeadline(data.headline);
-      setScript(response.text || '');
+      const parsed = safeJsonParse(response.text || '{}', { headline: data.headline, script: '' });
+      setHeadline(parsed.headline || data.headline);
+      setScript(parsed.script || '');
     } catch (err: any) {
       setError(err.message);
     } finally {
