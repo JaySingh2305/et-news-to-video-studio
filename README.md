@@ -1,5 +1,8 @@
 # 📰 ET News to Video Studio
 
+<img width="1888" height="934" alt="image" src="https://github.com/user-attachments/assets/29adec75-f9c5-4461-b234-6d6f0f31b28c" />
+
+
 A next-generation automated AI native news studio prototype. This Next.js web application transforms any business/financial news article URL into a fully-produced, short-form video briefing—complete with AI avatars, voiceovers, dynamic B-roll, subtitles, and real-time stock data—all with a single click.
 
 It specifically features the **Economic Times** brand styling and was built to demonstrate the capabilities of large multimodal models running complex agentic pipelines.
