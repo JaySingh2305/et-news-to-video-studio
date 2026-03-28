@@ -1,0 +1,5 @@
+{
+  "name": "ET News-to-Video Studio",
+  "description": "Transforms a news article URL into a high-quality 60-second video.",
+  "requestFramePermissions": []
+}
