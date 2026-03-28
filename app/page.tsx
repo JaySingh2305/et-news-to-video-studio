@@ -770,7 +770,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={isProcessingPipeline || !url}
-              className="absolute right-1 top-1 bottom-1 bg-red-600 hover:bg-indigo-700 disabled:bg-red-600/50 disabled:cursor-not-allowed rounded-full px-4 flex items-center gap-2 text-xs font-semibold transition-all"
+              className="absolute right-1 top-1 bottom-1 cursor-pointer bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 disabled:cursor-not-allowed rounded-full px-4 flex items-center gap-2 text-xs font-semibold text-white transition-all"
             >
               {isProcessingPipeline ? (
                 <><Loader2 className="w-3 h-3 animate-spin" /> Processing</>
@@ -785,7 +785,7 @@ export default function Home() {
           <button
             onClick={handleExportVideo}
             disabled={isExporting || !audioData || !avatarUrl || isProcessingPipeline}
-            className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100/50 disabled:cursor-not-allowed rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-1.5 cursor-pointer bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100/50 disabled:cursor-not-allowed rounded-md text-sm font-medium transition-colors flex items-center gap-2"
           >
             {isExporting ? (
               <>
